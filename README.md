@@ -1,0 +1,63 @@
+# Militasdrawer
+
+Primeira versão de um editor nativo de diagramas e ideias para iPhone e iPad, escrito em Swift, SwiftUI e UIKit. Não usa WebView, Excalidraw nem dependências externas. Requer iOS/iPadOS 17 ou posterior.
+
+## Abrir e executar
+
+1. Abra `Militasdrawer.xcodeproj` no Xcode (validado com Xcode 26.2).
+2. Selecione o scheme `Militasdrawer` e um simulador de iPhone ou iPad.
+3. Execute com ⌘R.
+4. Para um aparelho físico, configure seu Team em Signing & Capabilities. O identificador inicial é `com.victormilitao.Militasdrawer`; ajuste caso necessário.
+
+## Ferramentas desta versão
+
+- Retângulo, elipse e losango: escolha a ferramenta e arraste no quadro.
+- Seta: arraste entre formas para conectar suas bordas. Ao mover uma forma, a conexão acompanha. Também permite setas livres.
+- Desenho livre: arraste com dedo ou Apple Pencil; espessura fixa nesta versão.
+- Texto: escolha Texto e toque no quadro; para editar, selecione o texto e use o botão de edição.
+- Seleção: toque para selecionar; arraste o objeto para mover. A lixeira apaga o selecionado.
+- Cores: a paleta define a cor dos próximos elementos e altera a seleção atual.
+- Navegação: use dois dedos ou a ferramenta Navegar; pinça amplia de 20% a 400%. O botão de porcentagem enquadra o desenho.
+- Desfazer/refazer: botões no topo, com atalhos ⌘Z e ⇧⌘Z em teclado físico. Até 100 operações por sessão.
+- Barra de ferramentas rolável no iPhone e centralizada no iPad. Retrato e paisagem suportados.
+
+Mover uma seta diretamente a desconecta das formas. Excluir uma forma preserva suas setas como traços com a extremidade correspondente livre.
+
+## Armazenamento
+
+Um quadro local é salvo automaticamente em `Documents/quadro.militasdrawer.json` dentro do contêiner do app, 350 ms após uma edição, e também quando o app deixa de estar ativo. A escrita é atômica. O documento contém versão, IDs, formas, pontos, cores, textos e conexões; não depende de objetos UIKit para serialização. O histórico e o enquadramento são temporários.
+
+Se o arquivo existente não puder ser lido, o app preserva o original, informa o erro e desativa a gravação nessa sessão. Não existe sincronização em nuvem; remover o app pode remover o quadro. Galeria de documentos, importação e exportação ainda não estão implementadas.
+
+## Estrutura
+
+- `Militasdrawer/Core/Drawing.swift`: documento, geometria das conexões e histórico.
+- `Militasdrawer/App/EditorStore.swift`: estado de edição, texto e persistência.
+- `Militasdrawer/App/DrawingCanvas.swift`: renderização Core Graphics, seleção e gestos UIKit.
+- `Militasdrawer/App/MilitasdrawerApp.swift`: interface SwiftUI adaptada ao tamanho disponível.
+- `Tests/CoreTests`: conexão, exclusão, histórico e serialização.
+- `Tests/UITests`: criação de formas, seta e texto, desfazer/refazer e reabertura do documento.
+
+## Verificação
+
+```sh
+swift test
+xcodebuild -project Militasdrawer.xcodeproj -scheme Militasdrawer \
+  -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+```
+
+Os testes de interface podem ser executados com ⌘U no Xcode, selecionando um simulador. Eles usam um quadro vazio no início e sobrescrevem o documento do app nesse simulador. Não execute o teste em um ambiente com desenhos que deseja preservar.
+
+## Validação realizada
+
+- Compilação Debug para iOS Simulator com Xcode 26.2.
+- Quatro testes do núcleo aprovados.
+- Fluxo de formas, seta, texto, desfazer/refazer e persistência aprovado no iPhone 17 Pro e iPad Pro de 11 polegadas, ambos com iOS 26.2.
+- Testes de desenho livre, movimentação, exclusão e zoom aprovados nos dois simuladores.
+- Capturas da interface em `docs/iphone-preview.png` e `docs/ipad-preview.png`.
+
+## Limites e próximos passos
+
+Esta é uma base funcional para desenvolvimento, não uma versão pronta para a App Store. Ainda faltam redimensionamento/rotação, seleção múltipla, agrupamento, imagens, roteamento de conectores, exportação, biblioteca de documentos, ícone de distribuição e preparação da loja. Acessibilidade do conteúdo individual do quadro e suporte avançado ao Apple Pencil (pressão, rejeição de palma, hover) precisam evoluir. Gestos e latência do Pencil precisam de validação em aparelho físico.
+
+O formato `.excalidraw` ainda não é compatível com o formato próprio do app.
