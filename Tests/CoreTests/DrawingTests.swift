@@ -1,5 +1,5 @@
 import XCTest
-@testable import MilitasdrawerCore
+@testable import MilitasdrawCore
 
 final class DrawingTests: XCTestCase {
     func testDuplicatePreservesContentAndMovesOnlyCopyWithUndo() throws {

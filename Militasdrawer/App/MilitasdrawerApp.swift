@@ -1,6 +1,6 @@
 import SwiftUI
 
-@main struct MilitasdrawerApp: App {
+@main struct MilitasdrawApp: App {
     @StateObject private var store = EditorStore()
     @Environment(\.scenePhase) private var phase
     var body: some Scene {
@@ -41,7 +41,7 @@ struct EditorView: View {
         HStack(spacing: 8) {
             Image(systemName: "square.stack.3d.up.fill").font(.system(size: 18)).foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Militasdrawer").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Text(verbatim: "Militasdraw").font(.system(size: 15, weight: .semibold, design: .rounded))
                 Text(store.saveMessage).font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)

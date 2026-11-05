@@ -1,4 +1,4 @@
-# Militasdrawer
+# Militasdraw
 
 Primeira versão de um editor nativo de diagramas e ideias para iPhone e iPad, escrito em Swift, SwiftUI e UIKit. Não usa WebView, Excalidraw nem dependências externas. Requer iOS/iPadOS 17 ou posterior.
 
@@ -78,7 +78,7 @@ O target usa `AppIcon` em Debug e Release. A versão inicial de testes continua
 `0.1.0`, build `1`, com Bundle ID `com.victormilitao.Militasdrawer`.
 
 O próximo passo é criar o registro no App Store Connect: Apps → + → Novo App,
-plataforma iOS, nome Militasdrawer, idioma principal Inglês (EUA), o Bundle
+plataforma iOS, nome Militasdraw, idioma principal Inglês (EUA), o Bundle
 ID acima e SKU `militasdrawer-ios`. Criar o registro não publica o app na loja.
 Depois, gerar um Archive no Xcode e enviar ao App Store Connect para TestFlight.
 O upload, a configuração dos testadores e a análise beta são etapas separadas.

@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0000000000000000000000D1 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071; };
-		0000000000000000000000D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* Assets.xcassets */; };
 		00000000000000000000001F /* Tests/UITests/EditorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001E /* Tests/UITests/EditorUITests.swift */; };
 		0000000000000000000000C8 /* Militasdrawer/App/DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000064 /* Militasdrawer/App/DrawingCanvas.swift */; };
 		0000000000000000000000C9 /* Militasdrawer/App/EditorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000065 /* Militasdrawer/App/EditorStore.swift */; };
 		0000000000000000000000CA /* Militasdrawer/App/MilitasdrawerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000066 /* Militasdrawer/App/MilitasdrawerApp.swift */; };
 		0000000000000000000000CB /* Militasdrawer/Core/Drawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000067 /* Militasdrawer/Core/Drawing.swift */; };
+		0000000000000000000000D0 /* Militasdrawer/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* Militasdrawer/Assets.xcassets */; };
+		0000000000000000000000D1 /* Militasdrawer/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* Militasdrawer/Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,8 +27,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		000000000000000000000071 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Militasdrawer/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
-		000000000000000000000070 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Militasdrawer/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		000000000000000000000005 /* Militasdrawer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Militasdrawer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		00000000000000000000001E /* Tests/UITests/EditorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/UITests/EditorUITests.swift; sourceTree = SOURCE_ROOT; };
 		000000000000000000000020 /* MilitasdrawerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MilitasdrawerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -36,6 +34,8 @@
 		000000000000000000000065 /* Militasdrawer/App/EditorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Militasdrawer/App/EditorStore.swift; sourceTree = SOURCE_ROOT; };
 		000000000000000000000066 /* Militasdrawer/App/MilitasdrawerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Militasdrawer/App/MilitasdrawerApp.swift; sourceTree = SOURCE_ROOT; };
 		000000000000000000000067 /* Militasdrawer/Core/Drawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Militasdrawer/Core/Drawing.swift; sourceTree = SOURCE_ROOT; };
+		000000000000000000000070 /* Militasdrawer/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Militasdrawer/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		000000000000000000000071 /* Militasdrawer/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Militasdrawer/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,8 +57,8 @@
 				000000000000000000000065 /* Militasdrawer/App/EditorStore.swift */,
 				000000000000000000000066 /* Militasdrawer/App/MilitasdrawerApp.swift */,
 				000000000000000000000067 /* Militasdrawer/Core/Drawing.swift */,
-				000000000000000000000070 /* Assets.xcassets */,
-				000000000000000000000071 /* Localizable.xcstrings */,
+				000000000000000000000070 /* Militasdrawer/Assets.xcassets */,
+				000000000000000000000071 /* Militasdrawer/Localizable.xcstrings */,
 				000000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -141,8 +141,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0000000000000000000000D0 /* Assets.xcassets in Resources */,
-				0000000000000000000000D1 /* Localizable.xcstrings in Resources */,
+				0000000000000000000000D0 /* Militasdrawer/Assets.xcassets in Resources */,
+				0000000000000000000000D1 /* Militasdrawer/Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,11 +205,12 @@
 		00000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 45PH5QBLSP;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Militasdraw;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -226,11 +227,12 @@
 		00000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 45PH5QBLSP;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Militasdraw;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
