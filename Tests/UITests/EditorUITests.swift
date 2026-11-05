@@ -1,9 +1,23 @@
 import XCTest
 
 final class EditorUITests: XCTestCase {
+    @MainActor func testEnglishAndUnsupportedLanguageFallback() throws {
+        for language in ["en-US", "fr-FR", "pt-BR"] {
+            let app = XCUIApplication()
+            app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(\(language))", "-AppleLocale", "en_US"]
+            app.launch()
+            XCTAssertTrue(app.buttons[language == "pt-BR" ? "Retângulo" : "Rectangle"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons[language == "pt-BR" ? "Desfazer" : "Undo"].exists)
+            XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Salvo neste dispositivo" : "Saved on this device"].exists)
+            XCTAssertEqual(app.otherElements["drawingCanvas"].value as? String, language == "pt-BR" ? "0 elementos" : "0 elements")
+            app.terminate()
+        }
+    }
+
+
     @MainActor func testStandaloneTextEditsInlineAndDiscardsEmptyDrafts() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
@@ -40,7 +54,7 @@ final class EditorUITests: XCTestCase {
     }
     @MainActor func testMarqueeSelectionMovesAndDeletesMultipleObjects() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
@@ -73,7 +87,7 @@ final class EditorUITests: XCTestCase {
     }
     @MainActor func testDoubleTapEditsCenteredShapeText() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
@@ -117,7 +131,7 @@ final class EditorUITests: XCTestCase {
     }
     @MainActor func testShapesSwitchToSelectionAndResizeWithoutCreatingObjects() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
@@ -148,7 +162,7 @@ final class EditorUITests: XCTestCase {
     }
     @MainActor func testDrawingUndoTextAndPersistence() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
@@ -181,7 +195,7 @@ final class EditorUITests: XCTestCase {
     }
     @MainActor func testInkSelectionZoomAndLandscape() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
         app.launch()
         let canvas = app.otherElements["drawingCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))

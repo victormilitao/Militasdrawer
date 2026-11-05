@@ -12,10 +12,11 @@ Primeira versão de um editor nativo de diagramas e ideias para iPhone e iPad, e
 ## Ferramentas desta versão
 
 - Retângulo, elipse e losango: escolha a ferramenta e arraste no quadro.
-- Seta: arraste entre formas para conectar suas bordas. Ao mover uma forma, a conexão acompanha. Também permite setas livres.
+- Seta: arraste entre formas para conectar suas bordas. Ao mover uma forma, a conexão acompanha. Também permite setas livres. Para corrigir uma conexão, selecione a seta e arraste o círculo de uma das pontas até a forma desejada.
 - Desenho livre: arraste com dedo ou Apple Pencil; espessura fixa nesta versão.
 - Texto: escolha Texto e toque no quadro; para editar, selecione o texto e use o botão de edição.
 - Seleção: toque para selecionar; arraste o objeto para mover. A lixeira apaga o selecionado.
+- Duplicação: selecione um objeto e toque no botão Duplicar ao lado de desfazer/refazer no cabeçalho. A cópia aparece ligeiramente deslocada e fica selecionada. Dois toques no objeto continuam editando o texto.
 - Cores: a paleta define a cor dos próximos elementos e altera a seleção atual.
 - Navegação: use dois dedos ou a ferramenta Navegar; pinça amplia de 20% a 400%. O botão de porcentagem enquadra o desenho.
 - Desfazer/refazer: botões no topo, com atalhos ⌘Z e ⇧⌘Z em teclado físico. Até 100 operações por sessão.
@@ -58,6 +59,34 @@ Os testes de interface podem ser executados com ⌘U no Xcode, selecionando um s
 
 ## Limites e próximos passos
 
-Esta é uma base funcional para desenvolvimento, não uma versão pronta para a App Store. Ainda faltam redimensionamento/rotação, seleção múltipla, agrupamento, imagens, roteamento de conectores, exportação, biblioteca de documentos, ícone de distribuição e preparação da loja. Acessibilidade do conteúdo individual do quadro e suporte avançado ao Apple Pencil (pressão, rejeição de palma, hover) precisam evoluir. Gestos e latência do Pencil precisam de validação em aparelho físico.
+Esta é uma base funcional para desenvolvimento, não uma versão pronta para a App Store. Ainda faltam redimensionamento/rotação, seleção múltipla, agrupamento, imagens, roteamento de conectores, exportação, biblioteca de documentos e preparação da loja. Acessibilidade do conteúdo individual do quadro e suporte avançado ao Apple Pencil (pressão, rejeição de palma, hover) precisam evoluir. Gestos e latência do Pencil precisam de validação em aparelho físico.
 
 O formato `.excalidraw` ainda não é compatível com o formato próprio do app.
+
+## Ícone e preparação para TestFlight
+
+O catálogo `Militasdrawer/Assets.xcassets` contém o ícone de camadas azul-escuro
+(`#1E3A8A`) sobre fundo branco. O PNG mestre tem 1024 × 1024 pixels, sem canal
+alfa; o Xcode gera os tamanhos necessários para iPhone e iPad. O desenho é
+geometria própria inspirada no símbolo do cabeçalho. Para regenerar no macOS:
+
+```sh
+swift scripts/generate-app-icon.swift
+```
+
+O target usa `AppIcon` em Debug e Release. A versão inicial de testes continua
+`0.1.0`, build `1`, com Bundle ID `com.victormilitao.Militasdrawer`.
+
+O próximo passo é criar o registro no App Store Connect: Apps → + → Novo App,
+plataforma iOS, nome Militasdrawer, idioma principal Inglês (EUA), o Bundle
+ID acima e SKU `militasdrawer-ios`. Criar o registro não publica o app na loja.
+Depois, gerar um Archive no Xcode e enviar ao App Store Connect para TestFlight.
+O upload, a configuração dos testadores e a análise beta são etapas separadas.
+
+### Idiomas
+
+O idioma-base do app é inglês americano, com tradução em português brasileiro.
+O catálogo `Militasdrawer/Localizable.xcstrings` centraliza os textos da interface,
+mensagens e acessibilidade. O iOS escolhe a tradução conforme os idiomas preferidos
+do dispositivo ou o idioma definido para o app; o país do download não determina
+o idioma. Idiomas sem tradução usam inglês como fallback.

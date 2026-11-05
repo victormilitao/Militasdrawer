@@ -12,8 +12,8 @@ struct DrawingCanvas: UIViewRepresentable {
     func makeUIView(context: Context) -> CanvasView { CanvasView(store: store) }
     func updateUIView(_ view: CanvasView, context: Context) {
         if view.resetID != store.resetViewport { view.resetID = store.resetViewport; view.fitDrawing() }
-        view.accessibilityValue = "\(store.drawing.elements.count) elementos"
-        view.accessibilityHint = "\(store.selectedIDs.count) selecionados. Arraste no espaço vazio para selecionar uma área."
+        view.accessibilityValue = String(localized: "\(store.drawing.elements.count) elements")
+        view.accessibilityHint = String(localized: "\(store.selectedIDs.count) selected. Drag in empty space to select an area.")
         view.syncTextEditor()
         view.setNeedsDisplay()
     }
@@ -29,6 +29,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
     private var marquee: CGRect?
     private var selectionBeforeDrag: Set<UUID> = []
     private var movingIDs: Set<UUID> = []
+    private var arrowEndpoint: ArrowEndpoint?
     private var resizeCorner: ResizeCorner?
     private var startingOffset = CGPoint.zero
     private var navigating = false
@@ -39,6 +40,8 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         self.store = store; resetID = store.resetViewport
         super.init(frame: .zero)
         backgroundColor = .white; isMultipleTouchEnabled = true
+        // Redraw at the new bounds on rotation instead of stretching the cached drawing.
+        contentMode = .redraw
         let pan = UIPanGestureRecognizer(target: self, action: #selector(drag(_:)))
         pan.maximumNumberOfTouches = 1; addGestureRecognizer(pan)
         let navigation = UIPanGestureRecognizer(target: self, action: #selector(navigate(_:)))
@@ -56,16 +59,16 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         shapeTextEditor.textContainer.lineFragmentPadding = 0
         shapeTextEditor.tintColor = UIColor(hex: "1E3A8A")
         shapeTextEditor.accessibilityIdentifier = "shapeTextEditor"
-        shapeTextEditor.accessibilityLabel = "Texto da forma"
+        shapeTextEditor.accessibilityLabel = String(localized: "Shape Text")
         shapeTextEditor.isHidden = true
         let toolbar = UIToolbar()
         toolbar.sizeToFit()
-        toolbar.items = [.flexibleSpace(), UIBarButtonItem(title: "Concluir", style: .done, target: self, action: #selector(finishShapeText))]
+        toolbar.items = [.flexibleSpace(), UIBarButtonItem(title: String(localized: "Done"), style: .done, target: self, action: #selector(finishShapeText))]
         shapeTextEditor.inputAccessoryView = toolbar
         isAccessibilityElement = true
         accessibilityIdentifier = "drawingCanvas"
-        accessibilityLabel = "Quadro de diagramas"
-        accessibilityHint = "Selecione uma ferramenta. Toque duas vezes em uma forma para editar seu texto. Use dois dedos para navegar e uma pinça para ampliar."
+        accessibilityLabel = String(localized: "Diagram Canvas")
+        accessibilityHint = String(localized: "Select a tool. Double-tap a shape to edit its text. Use two fingers to pan and pinch to zoom.")
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -89,7 +92,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
             offsetBeforeText = offset
             shapeTextEditor.text = shape.text
             shapeTextEditor.accessibilityIdentifier = shape.kind == .text ? "canvasTextEditor" : "shapeTextEditor"
-            shapeTextEditor.accessibilityLabel = shape.kind == .text ? "Texto no quadro" : "Texto da forma"
+            shapeTextEditor.accessibilityLabel = shape.kind == .text ? String(localized: "Canvas Text") : String(localized: "Shape Text")
             addSubview(shapeTextEditor)
             shapeTextEditor.isHidden = false
             isAccessibilityElement = false
@@ -218,6 +221,15 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
                 }
             }
         }
+        // Draw endpoint handles above every object so connected tips remain visible.
+        if let arrow = store.drawing.elements.first(where: { $0.id == store.selected && $0.kind == .arrow }), marquee == nil {
+            let ends = store.drawing.endpoints(for: arrow)
+            for point in [ends.0, ends.1] {
+                let handle = UIBezierPath(ovalIn: CGRect(x: point.x - 6 / scale, y: point.y - 6 / scale, width: 12 / scale, height: 12 / scale))
+                UIColor.white.setFill(); handle.fill()
+                UIColor(hex: "1E3A8A").setStroke(); handle.lineWidth = 2 / scale; handle.stroke()
+            }
+        }
         if let marquee {
             let area = UIBezierPath(rect: marquee)
             UIColor(hex: "1E3A8A").withAlphaComponent(0.08).setFill(); area.fill()
@@ -278,7 +290,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
             finishShapeText()
             let translation = g.translation(in: self)
             origin = world(CGPoint(x: location.x - translation.x, y: location.y - translation.y))
-            before = store.drawing; startingOffset = offset; resizeCorner = nil; activeID = nil
+            before = store.drawing; startingOffset = offset; resizeCorner = nil; arrowEndpoint = nil; activeID = nil
             selectionBeforeDrag = store.selectedIDs; movingIDs = []; marquee = nil
             navigating = store.tool == .hand
             if navigating { return }
@@ -294,7 +306,18 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
                         if hypot(origin.x - handle.x, origin.y - handle.y) > 22 / scale { resizeCorner = nil }
                     }
                 }
-                if resizeCorner != nil {
+                if let arrow = store.drawing.elements.first(where: { $0.id == store.selected && $0.kind == .arrow }) {
+                    let ends = store.drawing.endpoints(for: arrow)
+                    let startDistance = hypot(origin.x - ends.0.x, origin.y - ends.0.y)
+                    let endDistance = hypot(origin.x - ends.1.x, origin.y - ends.1.y)
+                    if min(startDistance, endDistance) <= 22 / scale {
+                        arrowEndpoint = startDistance < endDistance ? .start : .end
+                    }
+                }
+                if arrowEndpoint != nil {
+                    activeID = store.selected
+                    updateDraggedElement(at: p)
+                } else if resizeCorner != nil {
                     activeID = store.selected
                 } else if let id = hit(origin) {
                     if !store.selectedIDs.contains(id) { store.selected = id }
@@ -324,7 +347,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
                     if e.kind != .pen { store.tool = .select }
                 }
             }
-            if let before { store.commit(from: before) }; before = nil; activeID = nil; marquee = nil; movingIDs = []
+            if let before { store.commit(from: before) }; before = nil; arrowEndpoint = nil; activeID = nil; marquee = nil; movingIDs = []
         case .cancelled, .failed:
             cancelEditing()
         default: break
@@ -332,6 +355,11 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         setNeedsDisplay()
     }
     private func updateDraggedElement(at p: Point) {
+        if let arrowEndpoint, let activeID, var drawing = before {
+            drawing.reconnectArrow(activeID, endpoint: arrowEndpoint, at: p, shapeID: hit(p, shapesOnly: true))
+            store.drawing = drawing
+            return
+        }
         if marquee != nil {
             let area = CGRect(x: min(origin.x, p.x), y: min(origin.y, p.y), width: abs(p.x - origin.x), height: abs(p.y - origin.y))
             marquee = area
@@ -360,7 +388,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
     }
     private func cancelEditing() {
         if let before { store.drawing = before; store.selectedIDs = selectionBeforeDrag }
-        before = nil; activeID = nil; marquee = nil; movingIDs = []
+        before = nil; arrowEndpoint = nil; activeID = nil; marquee = nil; movingIDs = []
     }
     @objc func navigate(_ g: UIPanGestureRecognizer) {
         if g.state == .began { finishShapeText(); cancelEditing() }

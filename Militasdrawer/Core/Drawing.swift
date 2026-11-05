@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 
 enum ElementKind: String, Codable, CaseIterable { case rectangle, ellipse, diamond, arrow, pen, text }
+enum ArrowEndpoint { case start, end }
 enum ResizeCorner: CaseIterable {
     case topLeft, topRight, bottomLeft, bottomRight
     func point(in bounds: CGRect) -> Point {
@@ -79,6 +80,18 @@ struct Drawing: Codable, Equatable {
             return area.minX <= b.minX && area.maxX >= b.maxX && area.minY <= b.minY && area.maxY >= b.maxY
         }.map(\.id))
     }
+    /// Copy one object, freezing connected arrows at their visible endpoints.
+    mutating func duplicate(_ id: UUID) -> UUID? {
+        guard var copy = elements.first(where: { $0.id == id }) else { return nil }
+        if copy.kind == .arrow {
+            let ends = endpoints(for: copy)
+            copy.start = ends.0; copy.end = ends.1
+            copy.source = nil; copy.target = nil
+        }
+        copy.id = UUID()
+        elements.append(copy)
+        return copy.id
+    }
     mutating func moveSelection(_ ids: Set<UUID>, dx: Double, dy: Double) {
         let original = self
         for i in elements.indices where ids.contains(elements[i].id) {
@@ -90,6 +103,21 @@ struct Drawing: Codable, Equatable {
                 if let target = elements[i].target, !ids.contains(target) { elements[i].target = nil }
             }
             elements[i].move(dx: dx, dy: dy)
+        }
+    }
+    mutating func reconnectArrow(_ id: UUID, endpoint: ArrowEndpoint, at point: Point, shapeID: UUID?) {
+        guard let i = elements.firstIndex(where: { $0.id == id && $0.kind == .arrow }) else { return }
+        let ends = endpoints(for: elements[i])
+        let connection = elements.first { $0.id == shapeID && $0.isShape }?.id
+        elements[i].start = ends.0
+        elements[i].end = ends.1
+        switch endpoint {
+        case .start:
+            elements[i].start = point
+            elements[i].source = connection
+        case .end:
+            elements[i].end = point
+            elements[i].target = connection
         }
     }
     func endpoints(for e: Element) -> (Point, Point) {

@@ -21,17 +21,21 @@ struct EditorView: View {
             header
             ZStack(alignment: .topLeading) {
                 DrawingCanvas(store: store)
+                    // Let the drawing reach the screen edges while controls stay in the safe area.
+                    .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
                 if store.drawing.elements.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Espaço para sua\npróxima ideia.").font(.system(size: sizeClass == .regular ? 28 : 22, weight: .semibold, design: .rounded))
-                        Text("Escolha uma forma e arraste para começar.").font(.caption).foregroundStyle(.secondary)
+                        Text(String(localized: "Space for your\nnext idea.")).font(.system(size: sizeClass == .regular ? 28 : 22, weight: .semibold, design: .rounded))
+                        Text(String(localized: "Choose a shape and drag to get started.")).font(.caption).foregroundStyle(.secondary)
                     }.padding(24).padding(.top, 24).allowsHitTesting(false)
                 }
             }
-            if store.inlineTextID == nil { bottomBar }
+            .overlay(alignment: .bottom) {
+                if store.inlineTextID == nil { bottomBar }
+            }
         }
         .background(Color.white).tint(accent).preferredColorScheme(.light)
-        .alert("Não foi possível concluir", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
+        .alert(String(localized: "Unable to Complete"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
     }
     private var header: some View {
         HStack(spacing: 8) {
@@ -41,8 +45,13 @@ struct EditorView: View {
                 Text(store.saveMessage).font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
-            Button { store.undo() } label: { Image(systemName: "arrow.uturn.backward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.past.isEmpty).accessibilityLabel("Desfazer").keyboardShortcut("z", modifiers: .command)
-            Button { store.redo() } label: { Image(systemName: "arrow.uturn.forward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.future.isEmpty).accessibilityLabel("Refazer").keyboardShortcut("z", modifiers: [.command, .shift])
+            Button { store.undo() } label: { Image(systemName: "arrow.uturn.backward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.past.isEmpty).accessibilityLabel(String(localized: "Undo")).keyboardShortcut("z", modifiers: .command)
+            Button { store.redo() } label: { Image(systemName: "arrow.uturn.forward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.future.isEmpty).accessibilityLabel(String(localized: "Redo")).keyboardShortcut("z", modifiers: [.command, .shift])
+            if store.selected != nil {
+                Button { store.duplicateSelection() } label: {
+                    Image(systemName: "plus.square.on.square").font(.system(size: 16)).frame(width: 44, height: 44)
+                }.accessibilityLabel(String(localized: "Duplicate Object")).accessibilityIdentifier("duplicateObjectButton").help(String(localized: "Duplicate Object"))
+            }
         }.padding(.horizontal, 12).padding(.vertical, 2)
     }
     private var bottomBar: some View {
@@ -68,7 +77,7 @@ struct EditorView: View {
                                 .frame(width: 44, height: 44)
                                 .contentShape(Rectangle())
                         }
-                        .accessibilityLabel("Cor \(colorName(hex))")
+                        .accessibilityLabel(String(localized: "Color \(colorName(hex))"))
                         .accessibilityAddTraits(store.color == hex ? .isSelected : [])
                     }
                 }
@@ -93,11 +102,11 @@ struct EditorView: View {
             if let selected = store.drawing.elements.first(where: { $0.id == store.selected }), selected.kind == .text || selected.isShape {
                 Button { store.openText(at: selected.start, id: selected.id) } label: {
                     Image(systemName: "square.and.pencil").frame(width: 44, height: 44)
-                }.accessibilityLabel("Editar texto")
+                }.accessibilityLabel(String(localized: "Edit Text"))
             }
             Button(role: .destructive) { store.deleteSelection() } label: {
                 Image(systemName: "trash").frame(width: 44, height: 44)
-            }.disabled(store.selectedIDs.isEmpty).accessibilityLabel("Excluir seleção")
+            }.disabled(store.selectedIDs.isEmpty).accessibilityLabel(String(localized: "Delete Selection"))
         }.padding(.horizontal, 4).padding(.vertical, 4)
             .frame(maxWidth: 380)
             .background(.white, in: RoundedRectangle(cornerRadius: 16))
@@ -106,6 +115,6 @@ struct EditorView: View {
             .padding(.horizontal, 6).padding(.bottom, 4)
     }
     private func colorName(_ hex: String) -> String {
-        switch hex { case "6253D9": "roxo"; case "277C77": "verde"; case "D45F49": "coral"; case "C68A20": "amarelo"; default: "grafite" }
+        switch hex { case "6253D9": String(localized: "purple"); case "277C77": String(localized: "green"); case "D45F49": String(localized: "coral"); case "C68A20": String(localized: "yellow"); default: String(localized: "graphite") }
     }
 }
