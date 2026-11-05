@@ -13,6 +13,7 @@ import SwiftUI
 struct EditorView: View {
     @ObservedObject var store: EditorStore
     @Environment(\.horizontalSizeClass) var sizeClass
+    @State private var isPalettePresented = false
     private let palette = ["27364B", "6253D9", "277C77", "D45F49", "C68A20"]
     private let accent = Color(uiColor: UIColor(hex: "1E3A8A"))
     var body: some View {
@@ -45,22 +46,35 @@ struct EditorView: View {
         }.padding(.horizontal, 12).padding(.vertical, 2)
     }
     private var bottomBar: some View {
-        VStack(spacing: 2) {
-            HStack {
+        HStack(spacing: 0) {
+            Button { isPalettePresented.toggle() } label: {
+                Circle().fill(.black).frame(width: 16, height: 16)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(String(localized: "Choose Color"))
+            .accessibilityValue(colorName(store.color))
+            .accessibilityIdentifier("colorPaletteButton")
+            .popover(isPresented: $isPalettePresented, arrowEdge: .bottom) {
                 HStack(spacing: 0) {
                     ForEach(palette, id: \.self) { hex in
-                        Button { store.setColor(hex) } label: {
+                        Button {
+                            store.setColor(hex)
+                            isPalettePresented = false
+                        } label: {
                             Circle().fill(Color(uiColor: UIColor(hex: hex))).frame(width: 16, height: 16)
-                                .padding(4).overlay(Circle().stroke(store.color == hex ? accent : .clear, lineWidth: 1.5)).frame(width: 44, height: 44)
-                        }.accessibilityLabel("Cor \(colorName(hex))").accessibilityAddTraits(store.color == hex ? .isSelected : [])
+                                .padding(4)
+                                .overlay(Circle().stroke(store.color == hex ? accent : .clear, lineWidth: 1.5))
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Cor \(colorName(hex))")
+                        .accessibilityAddTraits(store.color == hex ? .isSelected : [])
                     }
                 }
-                Spacer(minLength: 0)
-                if let selected = store.drawing.elements.first(where: { $0.id == store.selected }), selected.kind == .text || selected.isShape {
-                    Button { store.openText(at: selected.start, id: selected.id) } label: { Image(systemName: "square.and.pencil").frame(width: 44, height: 44) }.accessibilityLabel("Editar texto")
-                }
-                Button(role: .destructive) { store.deleteSelection() } label: { Image(systemName: "trash").frame(width: 44, height: 44) }.disabled(store.selectedIDs.isEmpty).accessibilityLabel("Excluir seleção")
-            }.padding(.horizontal, 12)
+                .padding(8)
+                .presentationCompactAdaptation(.popover)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 0) {
                     ForEach(Tool.allCases, id: \.self) { tool in
@@ -76,6 +90,14 @@ struct EditorView: View {
                     }
                 }
             }.accessibilityIdentifier("toolBar").frame(maxWidth: 360)
+            if let selected = store.drawing.elements.first(where: { $0.id == store.selected }), selected.kind == .text || selected.isShape {
+                Button { store.openText(at: selected.start, id: selected.id) } label: {
+                    Image(systemName: "square.and.pencil").frame(width: 44, height: 44)
+                }.accessibilityLabel("Editar texto")
+            }
+            Button(role: .destructive) { store.deleteSelection() } label: {
+                Image(systemName: "trash").frame(width: 44, height: 44)
+            }.disabled(store.selectedIDs.isEmpty).accessibilityLabel("Excluir seleção")
         }.padding(.horizontal, 4).padding(.vertical, 4)
             .frame(maxWidth: 380)
             .background(.white, in: RoundedRectangle(cornerRadius: 16))
