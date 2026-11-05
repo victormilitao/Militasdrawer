@@ -25,9 +25,11 @@ Mover uma seta diretamente a desconecta das formas. Excluir uma forma preserva s
 
 ## Armazenamento
 
-Um quadro local é salvo automaticamente em `Documents/quadro.militasdrawer.json` dentro do contêiner do app, 350 ms após uma edição, e também quando o app deixa de estar ativo. A escrita é atômica. O documento contém versão, IDs, formas, pontos, cores, textos e conexões; não depende de objetos UIKit para serialização. O histórico e o enquadramento são temporários.
+Os desenhos são salvos automaticamente em `Documents/desenhos.militasdrawer.json`, 350 ms após uma edição e quando o app deixa de estar ativo. A escrita é atômica. O arquivo contém os documentos, nomes, datas de atualização e o identificador do último desenho aberto. O histórico e o enquadramento são temporários.
 
-Se o arquivo existente não puder ser lido, o app preserva o original, informa o erro e desativa a gravação nessa sessão. Não existe sincronização em nuvem; remover o app pode remover o quadro. Galeria de documentos, importação e exportação ainda não estão implementadas.
+O app abre diretamente no último desenho selecionado; na primeira abertura, cria um desenho em branco. O ícone superior esquerdo abre um painel lateral com todos os desenhos, ordenados pela última alteração, e o botão “Novo desenho”. Os nomes iniciais são automáticos (“Desenho 1”, “Desenho 2”…); toque no título do desenho para renomear. Nomes vazios são rejeitados e espaços nas extremidades são removidos. Abrir um desenho não altera sua data de atualização. A troca salva o desenho atual primeiro e é interrompida se a gravação falhar.
+
+O quadro do formato anterior (`quadro.militasdrawer.json`) é migrado na primeira abertura, preservando o arquivo original. Se o arquivo existente não puder ser lido, o app preserva o original, informa o erro e desativa a gravação nessa sessão. Não existe sincronização em nuvem; remover o app pode remover os desenhos. Exclusão, importação e exportação ainda não estão implementadas.
 
 ## Estrutura
 
@@ -58,6 +60,10 @@ Os testes de interface podem ser executados com ⌘U no Xcode, selecionando um s
 
 ## Limites e próximos passos
 
-Esta é uma base funcional para desenvolvimento, não uma versão pronta para a App Store. Ainda faltam redimensionamento/rotação, seleção múltipla, agrupamento, imagens, roteamento de conectores, exportação, biblioteca de documentos, ícone de distribuição e preparação da loja. Acessibilidade do conteúdo individual do quadro e suporte avançado ao Apple Pencil (pressão, rejeição de palma, hover) precisam evoluir. Gestos e latência do Pencil precisam de validação em aparelho físico.
+Esta é uma base funcional para desenvolvimento, não uma versão pronta para a App Store. Ainda faltam redimensionamento/rotação, seleção múltipla, agrupamento, imagens, roteamento de conectores, exportação, ícone de distribuição e preparação da loja. Acessibilidade do conteúdo individual do quadro e suporte avançado ao Apple Pencil (pressão, rejeição de palma, hover) precisam evoluir. Gestos e latência do Pencil precisam de validação em aparelho físico.
 
 O formato `.excalidraw` ainda não é compatível com o formato próprio do app.
+
+## Validação da lista de desenhos
+
+Foram adicionados testes do núcleo para restauração do último desenho aberto, preservação de conteúdo, ordenação por atualização e rejeição de arquivos inválidos, além de um teste de interface para criar, alternar e reabrir desenhos. Esses testes e a compilação iOS precisam ser executados no Xcode: o ambiente desta alteração não dispõe de Swift/Xcode.

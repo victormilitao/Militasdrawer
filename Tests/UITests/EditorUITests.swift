@@ -1,6 +1,30 @@
 import XCTest
 
 final class EditorUITests: XCTestCase {
+    @MainActor func testRecentDrawingsSwitchAndRestoreLastOpened() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-reset"]
+        app.launch()
+        let canvas = app.otherElements["drawingCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 10))
+        app.buttons["Retângulo"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).press(forDuration: 0.1, thenDragTo: canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.4)))
+        app.buttons["Desenhos recentes"].tap()
+        app.buttons["Novo desenho"].tap()
+        XCTAssertEqual(canvas.value as? String, "0 elementos")
+        XCTAssertFalse(app.buttons["Desfazer"].isEnabled)
+        app.buttons["Desenhos recentes"].tap()
+        app.buttons.containing(.staticText, identifier: "Desenho 1").firstMatch.tap()
+        XCTAssertEqual(canvas.value as? String, "1 elementos")
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        XCTAssertTrue(canvas.waitForExistence(timeout: 10))
+        XCTAssertEqual(canvas.value as? String, "1 elementos")
+        app.buttons["Desenhos recentes"].tap()
+        app.buttons.containing(.staticText, identifier: "Desenho 2").firstMatch.tap()
+        XCTAssertEqual(canvas.value as? String, "0 elementos")
+    }
     @MainActor func testStandaloneTextEditsInlineAndDiscardsEmptyDrafts() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-reset"]

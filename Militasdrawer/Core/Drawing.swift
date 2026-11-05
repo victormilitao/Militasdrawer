@@ -126,3 +126,40 @@ struct History {
         past.append(current); return next
     }
 }
+
+struct SavedDrawing: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var name: String
+    var updatedAt = Date()
+    var drawing = Drawing()
+}
+
+struct DrawingArchive: Codable {
+    var version = 1
+    var drawings: [SavedDrawing] = []
+    var activeID: UUID?
+
+    var recent: [SavedDrawing] { drawings.sorted { $0.updatedAt > $1.updatedAt } }
+    var active: SavedDrawing? { drawings.first { $0.id == activeID } }
+
+    mutating func create(drawing: Drawing = Drawing()) {
+        let entry = SavedDrawing(name: "Desenho \(drawings.count + 1)", drawing: drawing)
+        drawings.append(entry)
+        activeID = entry.id
+    }
+
+    mutating func update(_ drawing: Drawing, at date: Date = Date()) {
+        guard let index = drawings.firstIndex(where: { $0.id == activeID }), drawings[index].drawing != drawing else { return }
+        drawings[index].drawing = drawing
+        drawings[index].updatedAt = date
+    }
+
+    func validate() throws {
+        guard version == 1,
+              Set(drawings.map(\.id)).count == drawings.count,
+              drawings.allSatisfy({ $0.drawing.version == 1 }),
+              (drawings.isEmpty ? activeID == nil : active != nil) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+    }
+}

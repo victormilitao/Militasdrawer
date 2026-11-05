@@ -6,13 +6,16 @@ import SwiftUI
     var body: some Scene {
         WindowGroup {
             EditorView(store: store)
-                .onChange(of: phase) { _, value in if value != .active { store.saveNow() } }
+                .onChange(of: phase) { _, value in if value != .active { store.finishTextEditing(); store.saveNow() } }
         }
     }
 }
 struct EditorView: View {
     @ObservedObject var store: EditorStore
     @Environment(\.horizontalSizeClass) var sizeClass
+    @State private var showsDrawings = false
+    @State private var showsRename = false
+    @State private var proposedName = ""
     private let palette = ["27364B", "6253D9", "277C77", "D45F49", "C68A20"]
     private let accent = Color(uiColor: UIColor(hex: "1E3A8A"))
     var body: some View {
@@ -29,20 +32,102 @@ struct EditorView: View {
             }
             if store.inlineTextID == nil { bottomBar }
         }
+        .accessibilityHidden(showsDrawings)
+        .overlay {
+            if showsDrawings {
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Color.black.opacity(0.2).ignoresSafeArea()
+                            .onTapGesture { showsDrawings = false }
+                            .accessibilityLabel("Fechar desenhos recentes")
+                            .accessibilityAddTraits(.isButton)
+                        recentDrawingsSheet
+                            .frame(width: min(360, geometry.size.width - 24))
+                            .frame(maxHeight: .infinity)
+                            .background(.regularMaterial)
+                            .shadow(color: .black.opacity(0.15), radius: 16, x: 4)
+                    }
+                }
+            }
+        }
         .background(Color.white).tint(accent).preferredColorScheme(.light)
         .alert("Não foi possível concluir", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
     }
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "square.stack.3d.up.fill").font(.system(size: 18)).foregroundStyle(accent)
+            Button {
+                store.finishTextEditing()
+                store.saveNow()
+                showsDrawings = true
+            } label: {
+                Image(systemName: "square.stack.3d.up.fill").font(.system(size: 18)).frame(width: 44, height: 44)
+            }.accessibilityLabel("Desenhos recentes")
             VStack(alignment: .leading, spacing: 2) {
-                Text("Militasdrawer").font(.system(size: 15, weight: .semibold, design: .rounded))
+                Button {
+                    store.finishTextEditing()
+                    proposedName = store.drawingName
+                    showsRename = true
+                } label: {
+                    Text(store.drawingName).lineLimit(1).font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                    .accessibilityLabel("Renomear desenho")
+                    .accessibilityValue(store.drawingName)
+                    .alert("Renomear desenho", isPresented: $showsRename) {
+                        TextField("Nome do desenho", text: $proposedName)
+                        Button("Cancelar", role: .cancel) { }
+                        Button("Salvar") { store.renameDrawing(proposedName) }
+                            .disabled(proposedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
                 Text(store.saveMessage).font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
             Button { store.undo() } label: { Image(systemName: "arrow.uturn.backward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.past.isEmpty).accessibilityLabel("Desfazer").keyboardShortcut("z", modifiers: .command)
             Button { store.redo() } label: { Image(systemName: "arrow.uturn.forward").font(.system(size: 16)).frame(width: 44, height: 44) }.disabled(store.history.future.isEmpty).accessibilityLabel("Refazer").keyboardShortcut("z", modifiers: [.command, .shift])
         }.padding(.horizontal, 12).padding(.vertical, 2)
+    }
+    private var recentDrawingsSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Desenhos recentes").font(.headline).accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button { showsDrawings = false } label: {
+                    Image(systemName: "xmark").frame(width: 44, height: 44)
+                }.accessibilityLabel("Fechar desenhos recentes")
+            }
+            Button {
+                if store.newDrawing() { showsDrawings = false }
+            } label: {
+                Label("Novo desenho", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44)
+            }.buttonStyle(.borderedProminent)
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(store.recentDrawings) { entry in
+                        Button {
+                            if store.openDrawing(entry.id) { showsDrawings = false }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(entry.name).font(.body.weight(.medium))
+                                    Text("Atualizado em \(entry.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 8)
+                                if entry.id == store.archive.activeID {
+                                    Image(systemName: "checkmark").accessibilityLabel("Desenho atual")
+                                }
+                            }
+                            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                            .background(entry.id == store.archive.activeID ? accent.opacity(0.08) : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                            .accessibilityAddTraits(entry.id == store.archive.activeID ? .isSelected : [])
+                    }
+                }
+            }
+        }.padding(16)
+            .accessibilityAddTraits(.isModal)
     }
     private var bottomBar: some View {
         VStack(spacing: 2) {

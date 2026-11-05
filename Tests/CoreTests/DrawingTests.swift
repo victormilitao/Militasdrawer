@@ -104,3 +104,44 @@ final class DrawingTests: XCTestCase {
         XCTAssertEqual(diamond.anchor(toward: Point(150, 150)), Point(75, 75))
     }
 }
+
+final class DrawingArchiveTests: XCTestCase {
+    func testRoundTripRestoresLastOpenedDrawingRatherThanMostRecentlyEdited() throws {
+        var archive = DrawingArchive()
+        let original = Drawing(elements: [Element(kind: .text, start: Point(0, 0), end: Point(20, 20), text: "Ideia")])
+        archive.create(drawing: original)
+        let firstID = archive.activeID
+        archive.create()
+        archive.activeID = firstID
+        let loaded = try JSONDecoder().decode(DrawingArchive.self, from: JSONEncoder().encode(archive))
+        try loaded.validate()
+        XCTAssertEqual(loaded.drawings.count, 2)
+        XCTAssertEqual(loaded.active?.drawing, original)
+        XCTAssertEqual(loaded.active?.name, "Desenho 1")
+    }
+
+    func testOnlyEditsChangeUpdateDateAndRecentOrder() {
+        var archive = DrawingArchive()
+        archive.create()
+        let firstID = archive.activeID
+        let date = archive.active!.updatedAt
+        archive.update(Drawing(), at: date.addingTimeInterval(60))
+        XCTAssertEqual(archive.active?.updatedAt, date)
+        archive.create()
+        archive.activeID = firstID
+        let changed = Drawing(elements: [Element(kind: .rectangle, start: Point(0, 0), end: Point(10, 10))])
+        archive.update(changed, at: date.addingTimeInterval(120))
+        XCTAssertEqual(archive.recent.first?.id, firstID)
+        XCTAssertTrue(archive.drawings[1].drawing.elements.isEmpty)
+    }
+
+    func testInvalidArchiveIsRejected() {
+        var archive = DrawingArchive()
+        archive.create()
+        archive.activeID = UUID()
+        XCTAssertThrowsError(try archive.validate())
+        archive.activeID = archive.drawings[0].id
+        archive.drawings[0].drawing.version = 99
+        XCTAssertThrowsError(try archive.validate())
+    }
+}

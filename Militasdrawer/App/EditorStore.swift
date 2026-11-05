@@ -28,23 +28,79 @@ enum Tool: String, CaseIterable {
     @Published var resetViewport = UUID()
     private var pendingSave: Task<Void, Never>?
     private var canSave = true
+    @Published private(set) var archive = DrawingArchive()
+    var recentDrawings: [SavedDrawing] { archive.recent }
+    var drawingName: String { archive.active?.name ?? "Novo desenho" }
     private let fileURL: URL
     init() {
-        fileURL = URL.documentsDirectory.appending(path: "quadro.militasdrawer.json")
+        fileURL = URL.documentsDirectory.appending(path: "desenhos.militasdrawer.json")
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset") { return }
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset") {
+            archive.create()
+            return
+        }
         #endif
         do {
             if FileManager.default.fileExists(atPath: fileURL.path) {
-                let loaded = try JSONDecoder().decode(Drawing.self, from: Data(contentsOf: fileURL))
-                guard loaded.version == 1 else { throw CocoaError(.fileReadUnknown) }
-                drawing = loaded
+                archive = try JSONDecoder().decode(DrawingArchive.self, from: Data(contentsOf: fileURL))
+                try archive.validate()
+            } else {
+                let legacyURL = URL.documentsDirectory.appending(path: "quadro.militasdrawer.json")
+                if FileManager.default.fileExists(atPath: legacyURL.path) {
+                    let loaded = try JSONDecoder().decode(Drawing.self, from: Data(contentsOf: legacyURL))
+                    guard loaded.version == 1 else { throw CocoaError(.fileReadUnknown) }
+                    archive.create(drawing: loaded)
+                }
             }
+            if archive.drawings.isEmpty { archive.create() }
+            drawing = archive.active?.drawing ?? Drawing()
+            saveNow()
         } catch {
             canSave = false
-            self.error = "Não foi possível abrir o quadro salvo. O arquivo original foi preservado. \(error.localizedDescription)"
+            self.error = "Não foi possível abrir os desenhos salvos. Os arquivos originais foram preservados. \(error.localizedDescription)"
             saveMessage = "Falha ao abrir arquivo"
         }
+    }
+    @discardableResult
+    func newDrawing() -> Bool {
+        switchDrawing(to: nil)
+    }
+    @discardableResult
+    func openDrawing(_ id: UUID) -> Bool {
+        guard archive.drawings.contains(where: { $0.id == id }) else { return false }
+        return switchDrawing(to: id)
+    }
+    func renameDrawing(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canSave, !trimmed.isEmpty, trimmed != drawingName,
+              let index = archive.drawings.firstIndex(where: { $0.id == archive.activeID }) else { return }
+        finishTextEditing()
+        guard saveNow() else { return }
+        let previous = archive
+        archive.drawings[index].name = trimmed
+        archive.drawings[index].updatedAt = Date()
+        if !saveNow() { archive = previous }
+    }
+    private func switchDrawing(to id: UUID?) -> Bool {
+        finishTextEditing()
+        guard saveNow() else { return false }
+        let previous = archive
+        if let id { archive.activeID = id } else { archive.create() }
+        do {
+            try JSONEncoder().encode(archive).write(to: fileURL, options: .atomic)
+        } catch {
+            archive = previous
+            saveMessage = "Falha ao salvar"
+            self.error = error.localizedDescription
+            return false
+        }
+        drawing = archive.active?.drawing ?? Drawing()
+        history = History()
+        selectedIDs = []
+        tool = .select
+        zoom = 1
+        resetViewport = UUID()
+        return true
     }
     func commit(from before: Drawing) {
         history.record(before, after: drawing)
@@ -60,14 +116,17 @@ enum Tool: String, CaseIterable {
             self?.saveNow()
         }
     }
-    func saveNow() {
+    @discardableResult
+    func saveNow() -> Bool {
         pendingSave?.cancel()
-        guard canSave else { return }
+        guard canSave else { return false }
         do {
-            let data = try JSONEncoder().encode(drawing)
+            archive.update(drawing)
+            let data = try JSONEncoder().encode(archive)
             try data.write(to: fileURL, options: .atomic)
             saveMessage = "Salvo neste dispositivo"
-        } catch { saveMessage = "Falha ao salvar"; self.error = error.localizedDescription }
+            return true
+        } catch { saveMessage = "Falha ao salvar"; self.error = error.localizedDescription; return false }
     }
     func undo() { finishTextEditing(); drawing = history.undo(drawing); selected = nil; scheduleSave() }
     func redo() { finishTextEditing(); drawing = history.redo(drawing); selected = nil; scheduleSave() }
