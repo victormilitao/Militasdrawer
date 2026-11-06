@@ -19,35 +19,42 @@ struct EditorView: View {
     private let palette = ["27364B", "6253D9", "277C77", "D45F49", "C68A20"]
     private let accent = Color(uiColor: UIColor(hex: "1E3A8A"))
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            ZStack(alignment: .topLeading) {
-                DrawingCanvas(store: store)
-                if store.drawing.elements.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Espaço para sua\npróxima ideia.").font(.system(size: sizeClass == .regular ? 28 : 22, weight: .semibold, design: .rounded))
-                        Text("Escolha uma forma e arraste para começar.").font(.caption).foregroundStyle(.secondary)
-                    }.padding(24).padding(.top, 24).allowsHitTesting(false)
+        ZStack(alignment: .leading) {
+            VStack(spacing: 0) {
+                header.zIndex(1)
+                ZStack(alignment: .topLeading) {
+                    DrawingCanvas(store: store)
+                        .clipped()
+                    if store.drawing.elements.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Espaço para sua\npróxima ideia.").font(.system(size: sizeClass == .regular ? 28 : 22, weight: .semibold, design: .rounded))
+                            Text("Escolha uma forma e arraste para começar.").font(.caption).foregroundStyle(.secondary)
+                        }.padding(24).padding(.top, 24).allowsHitTesting(false)
+                    }
                 }
+                if store.inlineTextID == nil { bottomBar }
             }
-            if store.inlineTextID == nil { bottomBar }
-        }
-        .accessibilityHidden(showsDrawings)
-        .overlay {
+            .allowsHitTesting(!showsDrawings)
+            .accessibilityHidden(showsDrawings)
+
             if showsDrawings {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
-                        Color.black.opacity(0.2).ignoresSafeArea()
-                            .onTapGesture { showsDrawings = false }
-                            .accessibilityLabel("Fechar desenhos recentes")
-                            .accessibilityAddTraits(.isButton)
+                        Button { showsDrawings = false } label: {
+                            Color.black.opacity(0.2).ignoresSafeArea()
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Fechar desenhos recentes")
                         recentDrawingsSheet
                             .frame(width: min(360, geometry.size.width - 24))
                             .frame(maxHeight: .infinity)
                             .background(.regularMaterial)
                             .shadow(color: .black.opacity(0.15), radius: 16, x: 4)
                     }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
                 }
+                .zIndex(2)
             }
         }
         .background(Color.white).tint(accent).preferredColorScheme(.light)
@@ -57,11 +64,16 @@ struct EditorView: View {
         HStack(spacing: 8) {
             Button {
                 store.finishTextEditing()
-                store.saveNow()
                 showsDrawings = true
             } label: {
-                Image(systemName: "square.stack.3d.up.fill").font(.system(size: 18)).frame(width: 44, height: 44)
-            }.accessibilityLabel("Desenhos recentes")
+                Image(systemName: "square.stack.3d.up.fill")
+                    .font(.system(size: 18))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+                .foregroundStyle(accent)
+                .accessibilityLabel("Desenhos recentes")
+                .accessibilityIdentifier("recentDrawingsButton")
             VStack(alignment: .leading, spacing: 2) {
                 Button {
                     store.finishTextEditing()

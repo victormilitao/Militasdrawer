@@ -1,6 +1,25 @@
 import XCTest
 
 final class EditorUITests: XCTestCase {
+    @MainActor func testTopLeftButtonOpensRecentDrawingsFromEntireTouchArea() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-reset"]
+        app.launch()
+        let recent = app.buttons["recentDrawingsButton"]
+        XCTAssertTrue(recent.waitForExistence(timeout: 10))
+        XCTAssertTrue(recent.isHittable)
+        // Tap the padding, outside the symbol itself.
+        recent.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).tap()
+        let newDrawing = app.buttons["Novo desenho"]
+        XCTAssertTrue(newDrawing.waitForExistence(timeout: 3))
+        XCTAssertTrue(newDrawing.isHittable)
+        newDrawing.tap()
+        XCTAssertEqual(app.buttons["Renomear desenho"].value as? String, "Desenho 2")
+        recent.tap()
+        XCTAssertTrue(newDrawing.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Desenho 1"].exists)
+        XCTAssertTrue(app.staticTexts["Desenho 2"].exists)
+    }
     @MainActor func testRecentDrawingsSwitchAndRestoreLastOpened() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-reset"]
