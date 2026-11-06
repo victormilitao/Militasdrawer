@@ -53,6 +53,10 @@ final class EditorUITests: XCTestCase {
             XCTAssertTrue(app.buttons[language == "pt-BR" ? "Desfazer" : "Undo"].exists)
             XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Salvo neste dispositivo" : "Saved on this device"].exists)
             XCTAssertEqual(app.otherElements["drawingCanvas"].value as? String, language == "pt-BR" ? "0 elementos" : "0 elements")
+            app.buttons["recentDrawingsButton"].tap()
+            XCTAssertTrue(app.buttons[language == "pt-BR" ? "Novo desenho" : "New Drawing"].waitForExistence(timeout: 3))
+            XCTAssertTrue(app.staticTexts["Militasdraw"].exists)
+            XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Desenho 1" : "Drawing 1"].exists)
             app.terminate()
         }
     }

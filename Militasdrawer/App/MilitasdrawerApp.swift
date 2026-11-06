@@ -50,7 +50,7 @@ struct EditorView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Fechar desenhos recentes")
+                        .accessibilityLabel(String(localized: "Close Recent Drawings"))
                         recentDrawingsSheet
                             .frame(width: min(360, geometry.size.width - 24))
                             .frame(maxHeight: .infinity)
@@ -91,12 +91,12 @@ struct EditorView: View {
                     .contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .foregroundStyle(accent)
-                .accessibilityLabel("Desenhos recentes")
+                .accessibilityLabel(String(localized: "Recent Drawings"))
                 .accessibilityIdentifier("recentDrawingsButton")
             VStack(alignment: .leading, spacing: 2) {
                 Group {
                     if isEditingName {
-                        TextField("Nome do desenho", text: $proposedName)
+                        TextField(String(localized: "Drawing Name"), text: $proposedName)
                             .textFieldStyle(.plain)
                             .focused($nameIsFocused)
                             .submitLabel(.done)
@@ -105,7 +105,7 @@ struct EditorView: View {
                                 if !focused { finishRenaming() }
                             }
                             .onAppear { nameIsFocused = true }
-                            .accessibilityLabel("Nome do desenho")
+                            .accessibilityLabel(String(localized: "Drawing Name"))
                     } else {
                         Button {
                             store.finishTextEditing()
@@ -117,7 +117,7 @@ struct EditorView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Renomear desenho")
+                        .accessibilityLabel(String(localized: "Rename Drawing"))
                         .accessibilityValue(store.drawingName)
                     }
                 }
@@ -152,12 +152,12 @@ struct EditorView: View {
                 Spacer()
                 Button { showsDrawings = false } label: {
                     Image(systemName: "xmark").frame(width: 44, height: 44)
-                }.accessibilityLabel("Fechar desenhos recentes")
+                }.accessibilityLabel(String(localized: "Close Recent Drawings"))
             }
             Button {
                 if store.newDrawing() { showsDrawings = false }
             } label: {
-                Label("Novo desenho", systemImage: "plus")
+                Label(String(localized: "New Drawing"), systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .foregroundStyle(.white)
@@ -180,7 +180,7 @@ struct EditorView: View {
                                 }
                                 Spacer(minLength: 8)
                                 if entry.id == store.archive.activeID {
-                                    Image(systemName: "checkmark").accessibilityLabel("Desenho atual")
+                                    Image(systemName: "checkmark").accessibilityLabel(String(localized: "Current Drawing"))
                                 }
                             }
                             .padding(12).frame(maxWidth: .infinity, alignment: .leading)

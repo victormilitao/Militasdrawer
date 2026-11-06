@@ -30,13 +30,14 @@ enum Tool: String, CaseIterable {
     private var canSave = true
     @Published private(set) var archive = DrawingArchive()
     var recentDrawings: [SavedDrawing] { archive.recent }
-    var drawingName: String { archive.active?.name ?? "Novo desenho" }
+    var drawingName: String { archive.active?.name ?? String(localized: "New Drawing") }
+    private var newDrawingName: String { String(localized: "Drawing \(archive.drawings.count + 1)") }
     private let fileURL: URL
     init() {
         fileURL = URL.documentsDirectory.appending(path: "desenhos.militasdrawer.json")
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset") {
-            archive.create()
+            archive.create(name: newDrawingName)
             return
         }
         #endif
@@ -49,15 +50,15 @@ enum Tool: String, CaseIterable {
                 if FileManager.default.fileExists(atPath: legacyURL.path) {
                     let loaded = try JSONDecoder().decode(Drawing.self, from: Data(contentsOf: legacyURL))
                     guard loaded.version == 1 else { throw CocoaError(.fileReadUnknown) }
-                    archive.create(drawing: loaded)
+                    archive.create(drawing: loaded, name: newDrawingName)
                 }
             }
-            if archive.drawings.isEmpty { archive.create() }
+            if archive.drawings.isEmpty { archive.create(name: newDrawingName) }
             drawing = archive.active?.drawing ?? Drawing()
             saveNow()
         } catch {
             canSave = false
-            self.error = "Não foi possível abrir os desenhos salvos. Os arquivos originais foram preservados. \(error.localizedDescription)"
+            self.error = String(localized: "Unable to open saved drawings. The original files have been preserved. \(error.localizedDescription)")
             saveMessage = String(localized: "Unable to open file")
         }
     }
@@ -85,7 +86,7 @@ enum Tool: String, CaseIterable {
         finishTextEditing()
         guard saveNow() else { return false }
         let previous = archive
-        if let id { archive.activeID = id } else { archive.create() }
+        if let id { archive.activeID = id } else { archive.create(name: newDrawingName) }
         do {
             try JSONEncoder().encode(archive).write(to: fileURL, options: .atomic)
         } catch {

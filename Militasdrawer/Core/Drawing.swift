@@ -170,8 +170,8 @@ struct DrawingArchive: Codable {
     var recent: [SavedDrawing] { drawings.sorted { $0.updatedAt > $1.updatedAt } }
     var active: SavedDrawing? { drawings.first { $0.id == activeID } }
 
-    mutating func create(drawing: Drawing = Drawing()) {
-        let entry = SavedDrawing(name: "Desenho \(drawings.count + 1)", drawing: drawing)
+    mutating func create(drawing: Drawing = Drawing(), name: String? = nil) {
+        let entry = SavedDrawing(name: name ?? "Desenho \(drawings.count + 1)", drawing: drawing)
         drawings.append(entry)
         activeID = entry.id
     }
