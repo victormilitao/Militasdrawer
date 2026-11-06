@@ -4,7 +4,7 @@ import Combine
 enum Tool: String, CaseIterable {
     case select, hand, rectangle, ellipse, diamond, arrow, pen, text
     var title: String {
-        switch self { case .select: "Selecionar"; case .hand: "Navegar"; case .rectangle: "Retângulo"; case .ellipse: "Elipse"; case .diamond: "Losango"; case .arrow: "Seta"; case .pen: "Desenhar"; case .text: "Texto" }
+        switch self { case .select: String(localized: "Select"); case .hand: String(localized: "Pan"); case .rectangle: String(localized: "Rectangle"); case .ellipse: String(localized: "Ellipse"); case .diamond: String(localized: "Diamond"); case .arrow: String(localized: "Arrow"); case .pen: String(localized: "Draw"); case .text: String(localized: "Text") }
     }
     var icon: String {
         switch self { case .select: "cursorarrow"; case .hand: "hand.draw"; case .rectangle: "rectangle"; case .ellipse: "circle"; case .diamond: "diamond"; case .arrow: "arrow.up.right"; case .pen: "pencil.tip"; case .text: "textformat" }
@@ -20,7 +20,7 @@ enum Tool: String, CaseIterable {
     }
     @Published var color = "27364B"
     @Published var history = History()
-    @Published var saveMessage = "Salvo neste dispositivo"
+    @Published var saveMessage = String(localized: "Saved on this device")
     @Published var error: String?
     @Published var inlineTextID: UUID?
     private var beforeInlineText: Drawing?
@@ -58,7 +58,7 @@ enum Tool: String, CaseIterable {
         } catch {
             canSave = false
             self.error = "Não foi possível abrir os desenhos salvos. Os arquivos originais foram preservados. \(error.localizedDescription)"
-            saveMessage = "Falha ao abrir arquivo"
+            saveMessage = String(localized: "Unable to open file")
         }
     }
     @discardableResult
@@ -90,7 +90,7 @@ enum Tool: String, CaseIterable {
             try JSONEncoder().encode(archive).write(to: fileURL, options: .atomic)
         } catch {
             archive = previous
-            saveMessage = "Falha ao salvar"
+            saveMessage = String(localized: "Unable to save")
             self.error = error.localizedDescription
             return false
         }
@@ -109,7 +109,7 @@ enum Tool: String, CaseIterable {
     }
     func scheduleSave() {
         guard canSave else { return }
-        saveMessage = "Salvando…"
+        saveMessage = String(localized: "Saving…")
         pendingSave?.cancel()
         pendingSave = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
@@ -124,12 +124,22 @@ enum Tool: String, CaseIterable {
             archive.update(drawing)
             let data = try JSONEncoder().encode(archive)
             try data.write(to: fileURL, options: .atomic)
-            saveMessage = "Salvo neste dispositivo"
+            saveMessage = String(localized: "Saved on this device")
             return true
-        } catch { saveMessage = "Falha ao salvar"; self.error = error.localizedDescription; return false }
+        } catch { saveMessage = String(localized: "Unable to save"); self.error = error.localizedDescription; return false }
     }
     func undo() { finishTextEditing(); drawing = history.undo(drawing); selected = nil; scheduleSave() }
     func redo() { finishTextEditing(); drawing = history.redo(drawing); selected = nil; scheduleSave() }
+    func duplicateSelection() {
+        finishTextEditing()
+        guard let id = selected else { return }
+        let before = drawing
+        guard let copyID = drawing.duplicate(id) else { return }
+        drawing.moveSelection([copyID], dx: 24 / zoom, dy: 24 / zoom)
+        selected = copyID
+        tool = .select
+        commit(from: before)
+    }
     func deleteSelection() {
         finishTextEditing()
         guard !selectedIDs.isEmpty else { return }; let before = drawing

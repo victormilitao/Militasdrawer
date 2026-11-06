@@ -1,7 +1,69 @@
 import XCTest
-@testable import MilitasdrawerCore
+@testable import MilitasdrawCore
 
 final class DrawingTests: XCTestCase {
+    func testDuplicatePreservesContentAndMovesOnlyCopyWithUndo() throws {
+        for kind in ElementKind.allCases {
+            let object = Element(kind: kind, start: Point(10, 20), end: Point(100, 120),
+                                 points: [Point(10, 20), Point(100, 120)], text: "Ideia", color: "FF0000", width: 4)
+            let before = Drawing(elements: [object])
+            var drawing = before
+            let id = try XCTUnwrap(drawing.duplicate(object.id))
+            XCTAssertNotEqual(id, object.id)
+            var expected = object
+            expected.id = id
+            expected.move(dx: 30, dy: 50)
+            drawing.moveSelection([id], dx: 30, dy: 50)
+            XCTAssertEqual(drawing.elements, [object, expected])
+            var history = History()
+            history.record(before, after: drawing)
+            XCTAssertEqual(history.undo(drawing), before)
+            XCTAssertEqual(history.redo(before), drawing)
+        }
+    }
+    func testDuplicateArrowFreezesConnectionsWithoutChangingOriginal() throws {
+        let shape = Element(kind: .rectangle, start: Point(0, 0), end: Point(100, 100))
+        let arrow = Element(kind: .arrow, start: Point(50, 50), end: Point(300, 50), source: shape.id)
+        var drawing = Drawing(elements: [shape, arrow])
+        let ends = drawing.endpoints(for: arrow)
+        let id = try XCTUnwrap(drawing.duplicate(arrow.id))
+        drawing.moveSelection([id], dx: 20, dy: 30)
+        XCTAssertEqual(drawing.elements[1], arrow)
+        XCTAssertNil(drawing.elements[2].source)
+        XCTAssertNil(drawing.elements[2].target)
+        XCTAssertEqual(drawing.elements[2].start, ends.0.moved(20, 30))
+        XCTAssertEqual(drawing.elements[2].end, ends.1.moved(20, 30))
+    }
+    func testReconnectEitherArrowEndpointAndUndo() {
+        let a = Element(kind: .rectangle, start: Point(0, 0), end: Point(100, 100))
+        let b = Element(kind: .ellipse, start: Point(300, 0), end: Point(400, 100))
+        for endpoint in [ArrowEndpoint.start, .end] {
+            let arrow = Element(kind: .arrow, start: Point(150, 50), end: Point(250, 50),
+                                source: endpoint == .end ? a.id : nil, target: endpoint == .start ? b.id : nil)
+            let before = Drawing(elements: [a, b, arrow])
+            var drawing = before
+            let shape = endpoint == .start ? a : b
+            drawing.reconnectArrow(arrow.id, endpoint: endpoint, at: Point(shape.bounds.midX, shape.bounds.midY), shapeID: shape.id)
+            XCTAssertEqual(drawing.elements[2].source, a.id)
+            XCTAssertEqual(drawing.elements[2].target, b.id)
+            XCTAssertEqual(drawing.endpoints(for: drawing.elements[2]).0, Point(100, 50))
+            XCTAssertEqual(drawing.endpoints(for: drawing.elements[2]).1, Point(300, 50))
+            var history = History()
+            history.record(before, after: drawing)
+            XCTAssertEqual(history.undo(drawing), before)
+            XCTAssertEqual(history.redo(before), drawing)
+            drawing.reconnectArrow(arrow.id, endpoint: endpoint, at: Point(200, 200), shapeID: nil)
+            if endpoint == .start {
+                XCTAssertNil(drawing.elements[2].source)
+                XCTAssertEqual(drawing.elements[2].target, b.id)
+                XCTAssertEqual(drawing.elements[2].start, Point(200, 200))
+            } else {
+                XCTAssertEqual(drawing.elements[2].source, a.id)
+                XCTAssertNil(drawing.elements[2].target)
+                XCTAssertEqual(drawing.elements[2].end, Point(200, 200))
+            }
+        }
+    }
     func testMarqueeIncludesEnclosedShapesAndZeroHeightLines() {
         let shape = Element(kind: .rectangle, start: Point(10, 10), end: Point(40, 40))
         let partial = Element(kind: .ellipse, start: Point(80, 80), end: Point(120, 120))
