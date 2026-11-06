@@ -14,8 +14,10 @@ struct EditorView: View {
     @ObservedObject var store: EditorStore
     @Environment(\.horizontalSizeClass) var sizeClass
     @State private var showsDrawings = false
-    @State private var showsRename = false
+    @State private var isEditingName = false
+    @FocusState private var nameIsFocused: Bool
     @State private var proposedName = ""
+    @State private var titleFrame: CGRect = .zero
     private let palette = ["27364B", "6253D9", "277C77", "D45F49", "C68A20"]
     private let accent = Color(uiColor: UIColor(hex: "1E3A8A"))
     var body: some View {
@@ -57,13 +59,27 @@ struct EditorView: View {
                 .zIndex(2)
             }
         }
+        .simultaneousGesture(SpatialTapGesture(coordinateSpace: .global).onEnded { event in
+            if isEditingName && !titleFrame.contains(event.location) {
+                finishRenaming()
+            }
+        })
         .background(Color.white).tint(accent).preferredColorScheme(.light)
         .alert("Não foi possível concluir", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
+    }
+    private func finishRenaming() {
+        guard isEditingName else { return }
+        isEditingName = false
+        nameIsFocused = false
+        if !proposedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            store.renameDrawing(proposedName)
+        }
     }
     private var header: some View {
         HStack(spacing: 8) {
             Button {
                 store.finishTextEditing()
+                finishRenaming()
                 showsDrawings = true
             } label: {
                 Image(systemName: "square.stack.3d.up.fill")
@@ -75,22 +91,38 @@ struct EditorView: View {
                 .accessibilityLabel("Desenhos recentes")
                 .accessibilityIdentifier("recentDrawingsButton")
             VStack(alignment: .leading, spacing: 2) {
-                Button {
-                    store.finishTextEditing()
-                    proposedName = store.drawingName
-                    showsRename = true
-                } label: {
-                    Text(store.drawingName).lineLimit(1).font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
-                }.buttonStyle(.plain)
-                    .accessibilityLabel("Renomear desenho")
-                    .accessibilityValue(store.drawingName)
-                    .alert("Renomear desenho", isPresented: $showsRename) {
+                Group {
+                    if isEditingName {
                         TextField("Nome do desenho", text: $proposedName)
-                        Button("Cancelar", role: .cancel) { }
-                        Button("Salvar") { store.renameDrawing(proposedName) }
-                            .disabled(proposedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .textFieldStyle(.plain)
+                            .focused($nameIsFocused)
+                            .submitLabel(.done)
+                            .onSubmit { finishRenaming() }
+                            .onChange(of: nameIsFocused) { _, focused in
+                                if !focused { finishRenaming() }
+                            }
+                            .onAppear { nameIsFocused = true }
+                            .accessibilityLabel("Nome do desenho")
+                    } else {
+                        Button {
+                            store.finishTextEditing()
+                            proposedName = store.drawingName
+                            isEditingName = true
+                        } label: {
+                            Text(store.drawingName).lineLimit(1)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Renomear desenho")
+                        .accessibilityValue(store.drawingName)
                     }
+                }
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .frame(minHeight: 44)
+                .onGeometryChange(for: CGRect.self) { proxy in
+                    proxy.frame(in: .global)
+                } action: { titleFrame = $0 }
                 Text(store.saveMessage).font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
@@ -101,7 +133,14 @@ struct EditorView: View {
     private var recentDrawingsSheet: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Desenhos recentes").font(.headline).accessibilityAddTraits(.isHeader)
+                Image(systemName: "square.stack.3d.up.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(accent)
+                    .frame(width: 44, height: 44)
+                    .accessibilityHidden(true)
+                Text(verbatim: "Militasdraw")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(accent)
                 Spacer()
                 Button { showsDrawings = false } label: {
                     Image(systemName: "xmark").frame(width: 44, height: 44)
@@ -110,8 +149,15 @@ struct EditorView: View {
             Button {
                 if store.newDrawing() { showsDrawings = false }
             } label: {
-                Label("Novo desenho", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 44)
-            }.buttonStyle(.borderedProminent)
+                Label("Novo desenho", systemImage: "plus")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .foregroundStyle(.white)
+                    .background(accent, in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(accent, lineWidth: 1))
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain)
             ScrollView {
                 LazyVStack(spacing: 8) {
                     ForEach(store.recentDrawings) { entry in
@@ -121,8 +167,8 @@ struct EditorView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(entry.name).font(.body.weight(.medium))
-                                    Text("Atualizado em \(entry.updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                    Text(entry.updatedAt.formatted(date: .abbreviated, time: .omitted))
+                                        .font(.caption).foregroundStyle(Color(uiColor: .darkGray))
                                 }
                                 Spacer(minLength: 8)
                                 if entry.id == store.archive.activeID {
