@@ -31,7 +31,7 @@ enum Tool: String, CaseIterable {
     @Published private(set) var archive = DrawingArchive()
     var recentDrawings: [SavedDrawing] { archive.recent }
     var drawingName: String { archive.active?.name ?? String(localized: "New Drawing") }
-    private var newDrawingName: String { String(localized: "Drawing \(archive.drawings.count + 1)") }
+    private var newDrawingName: String { String(localized: "Untitled \(archive.drawings.count + 1)") }
     private let fileURL: URL
     init() {
         fileURL = URL.documentsDirectory.appending(path: "desenhos.militasdrawer.json")
@@ -70,6 +70,35 @@ enum Tool: String, CaseIterable {
     func openDrawing(_ id: UUID) -> Bool {
         guard archive.drawings.contains(where: { $0.id == id }) else { return false }
         return switchDrawing(to: id)
+    }
+    @discardableResult
+    func deleteDrawing(_ id: UUID) -> Bool {
+        guard archive.drawings.contains(where: { $0.id == id }) else { return false }
+        finishTextEditing()
+        guard saveNow() else { return false }
+        let wasActive = archive.activeID == id
+        var updated = archive
+        updated.delete(id)
+        if updated.drawings.isEmpty {
+            updated.create(name: String(localized: "Untitled \(1)"))
+        }
+        do {
+            try JSONEncoder().encode(updated).write(to: fileURL, options: .atomic)
+        } catch {
+            saveMessage = String(localized: "Unable to save")
+            self.error = error.localizedDescription
+            return false
+        }
+        archive = updated
+        if wasActive {
+            drawing = archive.active?.drawing ?? Drawing()
+            history = History()
+            selectedIDs = []
+            tool = .select
+            zoom = 1
+            resetViewport = UUID()
+        }
+        return true
     }
     func renameDrawing(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)

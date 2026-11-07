@@ -1,6 +1,24 @@
 import XCTest
 
 final class EditorUITests: XCTestCase {
+    @MainActor func testEdgeSwipeOpensDrawingsWithoutDrawingOnCanvas() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
+        app.launch()
+        let canvas = app.otherElements["drawingCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 10))
+        app.buttons["Retângulo"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 8, dy: 0))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5)))
+        let newDrawing = app.buttons["Novo desenho"]
+        XCTAssertTrue(newDrawing.waitForExistence(timeout: 3))
+        newDrawing.swipeLeft()
+        XCTAssertTrue(app.buttons["recentDrawingsButton"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["recentDrawingsButton"].isHittable)
+        XCTAssertEqual(canvas.value as? String, "0 elementos")
+    }
+
     @MainActor func testTopLeftButtonOpensRecentDrawingsFromEntireTouchArea() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-reset", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
@@ -14,11 +32,11 @@ final class EditorUITests: XCTestCase {
         XCTAssertTrue(newDrawing.waitForExistence(timeout: 3))
         XCTAssertTrue(newDrawing.isHittable)
         newDrawing.tap()
-        XCTAssertEqual(app.buttons["Renomear desenho"].value as? String, "Desenho 2")
+        XCTAssertEqual(app.buttons["Renomear desenho"].value as? String, "Sem título 2")
         recent.tap()
         XCTAssertTrue(newDrawing.waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Desenho 1"].exists)
-        XCTAssertTrue(app.staticTexts["Desenho 2"].exists)
+        XCTAssertTrue(app.staticTexts["Sem título 1"].exists)
+        XCTAssertTrue(app.staticTexts["Sem título 2"].exists)
     }
     @MainActor func testRecentDrawingsSwitchAndRestoreLastOpened() throws {
         let app = XCUIApplication()
@@ -33,7 +51,7 @@ final class EditorUITests: XCTestCase {
         XCTAssertEqual(canvas.value as? String, "0 elementos")
         XCTAssertFalse(app.buttons["Desfazer"].isEnabled)
         app.buttons["Desenhos recentes"].tap()
-        app.buttons.containing(.staticText, identifier: "Desenho 1").firstMatch.tap()
+        app.buttons.containing(.staticText, identifier: "Sem título 1").firstMatch.tap()
         XCTAssertEqual(canvas.value as? String, "1 elementos")
         app.terminate()
         app.launchArguments = ["-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
@@ -41,7 +59,7 @@ final class EditorUITests: XCTestCase {
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
         XCTAssertEqual(canvas.value as? String, "1 elementos")
         app.buttons["Desenhos recentes"].tap()
-        app.buttons.containing(.staticText, identifier: "Desenho 2").firstMatch.tap()
+        app.buttons.containing(.staticText, identifier: "Sem título 2").firstMatch.tap()
         XCTAssertEqual(canvas.value as? String, "0 elementos")
     }
     @MainActor func testEnglishAndUnsupportedLanguageFallback() throws {
@@ -51,12 +69,12 @@ final class EditorUITests: XCTestCase {
             app.launch()
             XCTAssertTrue(app.buttons[language == "pt-BR" ? "Retângulo" : "Rectangle"].waitForExistence(timeout: 5))
             XCTAssertTrue(app.buttons[language == "pt-BR" ? "Desfazer" : "Undo"].exists)
-            XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Salvo neste dispositivo" : "Saved on this device"].exists)
+            XCTAssertFalse(app.staticTexts[language == "pt-BR" ? "Salvo neste dispositivo" : "Saved on this device"].exists)
             XCTAssertEqual(app.otherElements["drawingCanvas"].value as? String, language == "pt-BR" ? "0 elementos" : "0 elements")
             app.buttons["recentDrawingsButton"].tap()
             XCTAssertTrue(app.buttons[language == "pt-BR" ? "Novo desenho" : "New Drawing"].waitForExistence(timeout: 3))
             XCTAssertTrue(app.staticTexts["Militasdraw"].exists)
-            XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Desenho 1" : "Drawing 1"].exists)
+            XCTAssertTrue(app.staticTexts[language == "pt-BR" ? "Sem título 1" : "Untitled 1"].exists)
             app.terminate()
         }
     }
@@ -74,7 +92,8 @@ final class EditorUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
         if app.buttons["Continue"].firstMatch.exists { app.buttons["Continue"].firstMatch.tap() }
         XCTAssertFalse(app.buttons["Salvar"].exists)
-        app.buttons["Concluir"].tap()
+        XCTAssertFalse(app.buttons["Concluir"].exists)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
         XCTAssertEqual(canvas.value as? String, "0 elementos")
         app.buttons["Texto"].tap()
         canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.2)).tap()
@@ -82,7 +101,7 @@ final class EditorUITests: XCTestCase {
         XCTAssertEqual(editor.value as? String, "Texto livre\nSegunda linha")
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.name = "Texto livre direto no quadro"; shot.lifetime = .keepAlways; add(shot)
-        app.buttons["Concluir"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
         XCTAssertEqual(canvas.value as? String, "1 elementos")
         app.buttons["Desfazer"].tap()
         XCTAssertEqual(canvas.value as? String, "0 elementos")
@@ -94,7 +113,7 @@ final class EditorUITests: XCTestCase {
         editor.typeKey("a", modifierFlags: .command)
         editor.typeText(XCUIKeyboardKey.delete.rawValue)
         XCTAssertEqual(editor.value as? String, "")
-        app.buttons["Concluir"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
         XCTAssertEqual(canvas.value as? String, "0 elementos")
         app.buttons["Desfazer"].tap()
         XCTAssertEqual(canvas.value as? String, "1 elementos")
@@ -146,23 +165,24 @@ final class EditorUITests: XCTestCase {
             XCTAssertTrue(editor.waitForExistence(timeout: 3))
             if app.buttons["Continue"].firstMatch.exists { app.buttons["Continue"].firstMatch.tap() }
             XCTAssertFalse(app.buttons["Salvar"].exists)
+            XCTAssertFalse(app.buttons["Concluir"].exists)
             editor.typeText("Ideia\ncentral")
             XCTAssertEqual(editor.value as? String, "Ideia\ncentral")
             let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             shot.name = "Digitação na forma - \(tool)"; shot.lifetime = .keepAlways; add(shot)
-            app.buttons["Concluir"].tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
             XCTAssertTrue(canvas.waitForExistence(timeout: 3))
             XCTAssertEqual(canvas.value as? String, "1 elementos")
             app.buttons["Desfazer"].tap()
             canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.4)).doubleTap()
             XCTAssertEqual(editor.value as? String, "")
-            app.buttons["Concluir"].tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
             app.buttons["Refazer"].tap()
             canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.4)).doubleTap()
             XCTAssertEqual(editor.value as? String, "Ideia\ncentral")
             editor.typeKey("a", modifierFlags: .command)
             editor.typeText(XCUIKeyboardKey.delete.rawValue)
-            app.buttons["Concluir"].tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
             canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.4)).doubleTap()
             XCTAssertEqual(editor.value as? String, "")
             // Tapping outside finishes inline editing and dismisses the keyboard.
@@ -232,7 +252,7 @@ final class EditorUITests: XCTestCase {
         let editor = app.textViews.firstMatch
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
         editor.tap(); editor.typeText("Minha primeira ideia")
-        app.buttons["Concluir"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
         XCTAssertEqual(canvas.value as? String, "4 elementos")
         XCTAssertTrue(app.staticTexts["Salvo neste dispositivo"].waitForExistence(timeout: 5))
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Editor com diagrama"; shot.lifetime = .keepAlways; add(shot)

@@ -1,6 +1,86 @@
 {
   "sourceLanguage": "en",
   "strings": {
+  "The drawing “%@” will be permanently deleted. This cannot be undone.": {
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "The drawing “%@” will be permanently deleted. This cannot be undone."
+        }
+      },
+      "pt-BR": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "O desenho “%@” será apagado permanentemente. Essa ação não pode ser desfeita."
+        }
+      }
+    }
+  },
+  "Cancel": {
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Cancel"
+        }
+      },
+      "pt-BR": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Cancelar"
+        }
+      }
+    }
+  },
+  "Delete": {
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Delete"
+        }
+      },
+      "pt-BR": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Apagar"
+        }
+      }
+    }
+  },
+  "Delete Drawing?": {
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Delete Drawing?"
+        }
+      },
+      "pt-BR": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Apagar desenho?"
+        }
+      }
+    }
+  },
+  "Delete Drawing": {
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Delete Drawing"
+        }
+      },
+      "pt-BR": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Apagar desenho"
+        }
+      }
+    }
+  },
     "%lld elements": {
       "extractionState": "manual",
       "localizations": {
@@ -175,6 +255,12 @@
             "value": "Quadro de diagramas"
           }
         }
+      }
+    },
+    "Choose a shape": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a shape" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Escolher uma forma" } }
       }
     },
     "Diamond": {
@@ -714,19 +800,19 @@
         }
       }
     },
-    "Drawing %lld": {
+    "Untitled %lld": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Drawing %lld"
+            "value": "Untitled %lld"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desenho %lld"
+            "value": "Sem título %lld"
           }
         }
       }

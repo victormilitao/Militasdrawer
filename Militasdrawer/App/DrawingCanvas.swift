@@ -61,10 +61,6 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         shapeTextEditor.accessibilityIdentifier = "shapeTextEditor"
         shapeTextEditor.accessibilityLabel = String(localized: "Shape Text")
         shapeTextEditor.isHidden = true
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        toolbar.items = [.flexibleSpace(), UIBarButtonItem(title: String(localized: "Done"), style: .done, target: self, action: #selector(finishShapeText))]
-        shapeTextEditor.inputAccessoryView = toolbar
         isAccessibilityElement = true
         accessibilityIdentifier = "drawingCanvas"
         accessibilityLabel = String(localized: "Diagram Canvas")
@@ -109,7 +105,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
     private func layoutTextEditor() {
         guard let shape = store.drawing.elements.first(where: { $0.id == editingShapeID }) else { return }
         if shape.kind == .text {
-            let font = UIFont.systemFont(ofSize: 20 * scale, weight: .medium)
+            let font = drawingFont(size: 20 * scale)
             let height = min(max(44, shape.bounds.height * scale), max(44, bounds.height - 24))
             let width = 284 * scale
             var x = shape.start.x * scale + offset.x
@@ -136,7 +132,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         let adjustedY = max(12, min(y, bounds.height - editorHeight - 12))
         offset.y += adjustedY - y; y = adjustedY
         shapeTextEditor.frame = CGRect(x: box.minX * scale + offset.x, y: y, width: max(1, box.width * scale), height: editorHeight)
-        shapeTextEditor.font = UIFont.systemFont(ofSize: layout.fontSize * scale, weight: .medium)
+        shapeTextEditor.font = drawingFont(size: layout.fontSize * scale)
         shapeTextEditor.textColor = UIColor(hex: shape.color)
         let textHeight = max(layout.measuredHeight, (shapeTextEditor.font?.lineHeight ?? 20) / scale) * scale
         let inset = max(0, (editorHeight - textHeight) / 2)
@@ -151,7 +147,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         (textView.text as NSString).replacingCharacters(in: range, with: text).count <= 2000
     }
     func textViewDidEndEditing(_ textView: UITextView) { store.finishTextEditing() }
-    @objc private func finishShapeText() { store.finishTextEditing(); syncTextEditor(); setNeedsDisplay() }
+    private func finishShapeText() { store.finishTextEditing(); syncTextEditor(); setNeedsDisplay() }
     func gestureRecognizer(_ a: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith b: UIGestureRecognizer) -> Bool {
         (a is UIPinchGestureRecognizer && (b as? UIPanGestureRecognizer)?.minimumNumberOfTouches == 2) || (b is UIPinchGestureRecognizer && (a as? UIPanGestureRecognizer)?.minimumNumberOfTouches == 2)
     }
@@ -164,10 +160,73 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         offset = CGPoint(x: visible.midX - b.midX * scale, y: visible.midY - b.midY * scale)
         DispatchQueue.main.async { self.store.zoom = self.scale }; setNeedsDisplay()
     }
+    private func drawingFont(size: CGFloat) -> UIFont {
+        UIFont(name: "ChalkboardSE-Regular", size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: .medium)
+    }
+
+    // Derive the irregularity from the saved ID so it stays still while moving,
+    // zooming, editing, and reopening a drawing.
+    private func sketchPath(_ source: UIBezierPath, element: Element) -> UIBezierPath {
+        var seed = element.id.uuidString.utf8.reduce(UInt64(5381)) { ($0 &* 33) &+ UInt64($1) }
+        let amplitude = min(0.65, min(element.bounds.width, element.bounds.height) * 0.01)
+        func jitter() -> CGFloat {
+            seed = seed &* 6364136223846793005 &+ 1
+            return (CGFloat((seed >> 32) % 1001) / 500 - 1) * amplitude
+        }
+        let result = UIBezierPath()
+        var current = CGPoint.zero
+        var start = CGPoint.zero
+        func line(to end: CGPoint) {
+            let dx = end.x - current.x, dy = end.y - current.y
+            let length = max(1, hypot(dx, dy))
+            let bend = jitter()
+            let middle = CGPoint(x: current.x + dx / 2 - dy / length * bend,
+                                 y: current.y + dy / 2 + dx / length * bend)
+            // Preserve the edge tangents where they meet the rounded corners.
+            result.addCurve(to: middle,
+                controlPoint1: CGPoint(x: current.x + dx / 6, y: current.y + dy / 6),
+                controlPoint2: CGPoint(x: middle.x - dx / 6, y: middle.y - dy / 6))
+            result.addCurve(to: end,
+                controlPoint1: CGPoint(x: middle.x + dx / 6, y: middle.y + dy / 6),
+                controlPoint2: CGPoint(x: end.x - dx / 6, y: end.y - dy / 6))
+            current = end
+        }
+        source.cgPath.applyWithBlock { pointer in
+            let segment = pointer.pointee
+            switch segment.type {
+            case .moveToPoint:
+                current = segment.points[0]; start = current; result.move(to: current)
+            case .addLineToPoint:
+                line(to: segment.points[0])
+            case .addQuadCurveToPoint:
+                let control = segment.points[0]
+                current = segment.points[1]
+                result.addQuadCurve(to: current, controlPoint: control)
+            case .addCurveToPoint:
+                let a = segment.points[0], b = segment.points[1]
+                current = segment.points[2]
+                result.addCurve(to: current,
+                    controlPoint1: a,
+                    controlPoint2: b)
+            case .closeSubpath:
+                if current != start { line(to: start) }
+                result.close(); current = start
+            @unknown default: break
+            }
+        }
+        return result
+    }
+
     func path(_ e: Element) -> UIBezierPath {
+        let base = basePath(e)
+        return e.isShape || e.kind == .arrow ? sketchPath(base, element: e) : base
+    }
+
+    private func basePath(_ e: Element) -> UIBezierPath {
         let b = e.bounds
         switch e.kind {
-        case .rectangle: return UIBezierPath(roundedRect: b, cornerRadius: 8)
+        case .rectangle: return UIBezierPath(roundedRect: b, cornerRadius: min(24, min(b.width, b.height) * 0.22))
         case .ellipse: return UIBezierPath(ovalIn: b)
         case .diamond:
             let p = UIBezierPath(); p.move(to: CGPoint(x: b.midX, y: b.minY)); p.addLine(to: CGPoint(x: b.maxX, y: b.midY)); p.addLine(to: CGPoint(x: b.midX, y: b.maxY)); p.addLine(to: CGPoint(x: b.minX, y: b.midY)); p.close(); return p
@@ -199,11 +258,10 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
             let color = UIColor(hex: e.color), p = path(e)
             if e.kind == .text {
                 if e.id != editingShapeID {
-                    (e.text as NSString).draw(in: e.bounds, withAttributes: [.font: UIFont.systemFont(ofSize: 20, weight: .medium), .foregroundColor: color])
+                    (e.text as NSString).draw(in: e.bounds, withAttributes: [.font: drawingFont(size: 20), .foregroundColor: color])
                 }
             } else {
-                if e.isShape { color.withAlphaComponent(0.06).setFill(); p.fill() }
-                color.setStroke(); p.lineWidth = e.width; p.lineCapStyle = .round; p.lineJoinStyle = .round; p.stroke()
+                color.setStroke(); p.lineWidth = (e.isShape || e.kind == .arrow) ? e.width * 0.8 : e.width; p.lineCapStyle = .round; p.lineJoinStyle = .round; p.stroke()
                 if e.isShape && !e.text.isEmpty && e.id != editingShapeID { drawShapeText(e, color: color, context: ctx) }
             }
             if store.selectedIDs.contains(e.id) {
@@ -252,7 +310,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate, UITextViewDelegate 
         var attributes: [NSAttributedString.Key: Any] = [:]
         var measured = CGRect.zero
         repeat {
-            attributes = [.font: UIFont.systemFont(ofSize: fontSize, weight: .medium), .foregroundColor: color, .paragraphStyle: paragraph]
+            attributes = [.font: drawingFont(size: fontSize), .foregroundColor: color, .paragraphStyle: paragraph]
             measured = text.boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attributes, context: nil)
             if ceil(measured.height) <= height || fontSize <= 8 { break }
             fontSize -= 1

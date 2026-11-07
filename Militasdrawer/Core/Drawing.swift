@@ -171,7 +171,7 @@ struct DrawingArchive: Codable {
     var active: SavedDrawing? { drawings.first { $0.id == activeID } }
 
     mutating func create(drawing: Drawing = Drawing(), name: String? = nil) {
-        let entry = SavedDrawing(name: name ?? "Desenho \(drawings.count + 1)", drawing: drawing)
+        let entry = SavedDrawing(name: name ?? "Untitled \(drawings.count + 1)", drawing: drawing)
         drawings.append(entry)
         activeID = entry.id
     }
@@ -180,6 +180,11 @@ struct DrawingArchive: Codable {
         guard let index = drawings.firstIndex(where: { $0.id == activeID }), drawings[index].drawing != drawing else { return }
         drawings[index].drawing = drawing
         drawings[index].updatedAt = date
+    }
+
+    mutating func delete(_ id: UUID) {
+        drawings.removeAll { $0.id == id }
+        if activeID == id { activeID = recent.first?.id }
     }
 
     func validate() throws {

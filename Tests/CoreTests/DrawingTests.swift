@@ -179,7 +179,7 @@ final class DrawingArchiveTests: XCTestCase {
         try loaded.validate()
         XCTAssertEqual(loaded.drawings.count, 2)
         XCTAssertEqual(loaded.active?.drawing, original)
-        XCTAssertEqual(loaded.active?.name, "Desenho 1")
+        XCTAssertEqual(loaded.active?.name, "Untitled 1")
     }
 
     func testOnlyEditsChangeUpdateDateAndRecentOrder() {
@@ -195,6 +195,44 @@ final class DrawingArchiveTests: XCTestCase {
         archive.update(changed, at: date.addingTimeInterval(120))
         XCTAssertEqual(archive.recent.first?.id, firstID)
         XCTAssertTrue(archive.drawings[1].drawing.elements.isEmpty)
+    }
+
+    func testDeletingInactiveDrawingPreservesActiveDrawing() throws {
+        var archive = DrawingArchive()
+        archive.create()
+        let first = archive.activeID!
+        archive.create()
+        let active = archive.activeID
+        archive.delete(first)
+        XCTAssertEqual(archive.activeID, active)
+        XCTAssertEqual(archive.drawings.count, 1)
+        let restored = try JSONDecoder().decode(DrawingArchive.self, from: JSONEncoder().encode(archive))
+        try restored.validate()
+        XCTAssertFalse(restored.drawings.contains { $0.id == first })
+    }
+
+    func testDeletingActiveDrawingSelectsMostRecentRemaining() throws {
+        var archive = DrawingArchive()
+        archive.create()
+        let first = archive.activeID!
+        archive.create()
+        archive.drawings[0].updatedAt = Date().addingTimeInterval(60)
+        archive.create()
+        archive.delete(archive.activeID!)
+        XCTAssertEqual(archive.activeID, first)
+        try archive.validate()
+    }
+
+    func testDeletingLastDrawingLeavesValidEmptyArchive() throws {
+        var archive = DrawingArchive()
+        archive.create()
+        archive.delete(archive.activeID!)
+        XCTAssertTrue(archive.drawings.isEmpty)
+        XCTAssertNil(archive.activeID)
+        try archive.validate()
+        archive.create(name: "Untitled 1")
+        XCTAssertNotNil(archive.active)
+        try archive.validate()
     }
 
     func testInvalidArchiveIsRejected() {
